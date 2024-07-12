@@ -1,0 +1,61 @@
+###Heartland Ranch species SDM change since conservation
+
+require(terra)
+require(sf)
+install.packages('rgbif')
+require(rgbif)
+
+#######################################
+## DOWNLOAD AND CLEAN DATA FROM GBIF ##
+#######################################
+
+
+myspecies <- c("Bison bison","Canis latrans","Lynx rufus","Taxidea taxus", "Vulpes velox",
+	"Cynomys ludovicianus")
+
+#myspecies<-c("Bison bison")
+
+##"Bubo virginianus","Sceloporus undulatus","Castor canadensis",
+	"Dipodomys ordii", "Erethizon dorsatum",)
+
+# download GBIF occurrence data for this species; this takes time if there are many data points!
+
+
+##only yse occ_data for data exploration, not for publication. be sure to include DOIs
+gbif_data <- occ_data(scientificName = myspecies, hasCoordinate = TRUE, stateProvince = "Colorado",
+	occurrenceStatus='present',limit= 999999, year='2000,2024')
+
+# take a look at the downloaded data:
+gbif_data
+
+# if "Records found" is larger than "Records returned", you need to increase the 'limit' argument above -- see help(occ_data) for options and limitations
+# get the DOIs for citing these data properly:
+gbif_citation(gbif_data[[1]])
+
+# note: if you need or prefer only one DOI for the entire dataset, download the dataset directly from www.gbif.org and then import the .csv to R. It is very important to properly cite the data sources! GBIF is not a source, just a repository for many people who put in very hard work to collect these data and make them available
+# check how the data are organized:
+names(gbif_data)
+names(gbif_data[[myspecies[1]]])
+names(gbif_data[[myspecies[1]]]$meta)
+names(gbif_data[[myspecies[1]]]$data)
+
+# create and fill a list with only the 'data' section for each species:
+
+myspecies_coords_list <- vector("list", length(myspecies))
+names(myspecies_coords_list) <- myspecies
+for (s in myspecies) {
+  coords <- gbif_data[[s]]$data[ , c("decimalLongitude", "decimalLatitude", "occurrenceStatus", "coordinateUncertaintyInMeters", "institutionCode", "references")]
+  myspecies_coords_list[[s]] <- data.frame(species = s, coords)
+}
+lapply(myspecies_coords_list, head)
+
+# collapse the list into a data frame:
+myspecies_coords <- as.data.frame(do.call(rbind, myspecies_coords_list), row.names = 1:sum(sapply(myspecies_coords_list, nrow)))
+head(myspecies_coords)
+tail(myspecies_coords)
+
+# map the occurrence data:
+
+plot(myspecies_coords[ , c("decimalLongitude", "decimalLatitude")], col = as.factor(myspecies_coords$species), pch = 16)
+
+
